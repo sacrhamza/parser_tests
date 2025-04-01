@@ -1,0 +1,89 @@
+ASSIGNMENT=parserprog
+
+ex=~/$ASSIGNMENT
+
+cd $LIB/public/PA_Spring2025/PA2-SADALParser
+
+infile=~/prog2.cpp
+original=prog2.cpp
+
+st=1
+diff $infile $original
+st=$?
+
+if [ $st -eq 0 ] 
+then
+    [ ! -e $ex ] && echo Cannot find the program, please build it! && exit 1
+else
+  exit 1
+fi
+ 
+ofile=`mktemp`
+
+cases=("" "testprog1"  "testprog2" "testprog3" "testprog4" "testprog5" "testprog6" "testprog7" "testprog8" "testprog9" "testprog10" "testprog11" "testprog12" "testprog13" "testprog14" "testprog15" "testprog16" "testprog17" "testprog18" "testprog19" )
+
+
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19;
+do
+	score=0
+    errs=0
+    echo RUNNING ${cases[i]}
+    eval $LIB/public/wrapcase.pl -- "bash -c \"$ex ${cases[$i]} 2>&1\"" | tee $ofile
+
+    ## for setup ## cp $ofile files$i.correct
+    rc1=1
+    rc2=1
+    rc3=1
+    if (( $i >= 17 && $i <= 19 ))
+    then
+       diff -i -c $ofile ${cases[$i]}.correct
+       rc1=$?  
+       rc2=0
+       [ $rc1 -eq 0 ] && score=1
+    else 
+                             
+       if (( $i >= 1 && $i <= 10 ))
+	   then
+       		topmsg=$(egrep '[0-9]+: ([a-zA-Z0-9]+[ \n\r\t\f])+' ${cases[$i]}.emsg)
+       		##echo $topmsg
+       		egrep "$topmsg" $ofile                     
+       		rc=$?       
+       		echo $rc
+	   else
+		    rc=0
+	   fi
+                               
+       errs=$(egrep '[0-9]+: ([a-zA-Z0-9]+[ \n\r\t\f])+' ${cases[$i]}.correct | wc -l)
+       egrep "Number of Syntax Errors $errs" $ofile 
+       ##echo Number of Syntax Errors $errs                   
+       rc1=$?
+       
+       egrep "Unsuccessful Parsing" $ofile
+       rc2=$?
+       if (( $errs == 0 && $rc2 == 0 )) 
+       then 
+            rc1=1
+       fi
+       
+       lineno=$(egrep -o '[0-9]+: ' ${cases[$i]}.correct)
+       ##echo $lineno
+                                 
+           egrep "$lineno" $ofile
+        
+           rc3=$?
+        ##echo $rc3         
+       ##echo Line#: $lineno $rc3      
+       if (( $rc3 == 0 ))
+       then
+        [ $rc1 -eq 0 -a $rc2 -eq 0 -a $rc -eq 0 ] && score=1
+       fi
+    fi
+
+    echo RESULT: ${cases[i]}  "[ " $score " / 1 ]"
+    echo "-----------------------------------------------------"  
+
+    rm $ofile
+done
+
+        
+exit $score
